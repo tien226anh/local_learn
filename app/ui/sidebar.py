@@ -14,7 +14,7 @@ class Sidebar(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         
         self.header = QLabel("Course Content")
-        self.header.setStyleSheet("padding: 10px; font-weight: bold; background-color: #eee;")
+        self.header.setStyleSheet("padding: 10px; font-weight: bold; background-color: #333; color: #fff;")
         self.layout.addWidget(self.header)
 
         self.model = QFileSystemModel()
