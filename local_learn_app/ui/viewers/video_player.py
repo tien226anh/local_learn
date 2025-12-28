@@ -1,7 +1,7 @@
-from PyQt6.QtWidgets import QVBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QSlider, QStyle
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
-from PyQt6.QtCore import QUrl, pyqtSignal
+from PyQt6.QtCore import QUrl, pyqtSignal, Qt
 from .base_viewer import BaseViewer
 
 class VideoPlayer(BaseViewer):
@@ -21,14 +21,54 @@ class VideoPlayer(BaseViewer):
         self.media_player.setAudioOutput(self.audio_output)
         self.media_player.setVideoOutput(self.video_widget)
         
+        # Connect signals
         self.media_player.positionChanged.connect(self._on_position_changed)
         self.media_player.playbackStateChanged.connect(self._on_state_changed)
+        self.media_player.durationChanged.connect(self._on_duration_changed)
+
+        # Controls Layout
+        self.controls_layout = QHBoxLayout()
+        self.layout.addLayout(self.controls_layout)
+
+        # Play/Pause Button
+        self.play_button = QPushButton()
+        self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        self.play_button.clicked.connect(self.toggle_playback)
+        self.controls_layout.addWidget(self.play_button)
+
+        # Slider
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(0, 0)
+        self.slider.sliderMoved.connect(self.set_position)
+        # Using sliderPressed/Released could be better for smoother seeking, but sliderMoved is usually okay
+        self.controls_layout.addWidget(self.slider)
+
+    def toggle_playback(self):
+        if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.media_player.pause()
+        else:
+            self.media_player.play()
 
     def _on_position_changed(self, pos):
+        # Update slider only if not being dragged might be needed, 
+        # but for now let's just update. 
+        # If user holds handle, this might fight. 
+        # Ideally check self.slider.isSliderDown()
+        if not self.slider.isSliderDown():
+            self.slider.setValue(pos)
+        
         self.position_changed.emit(pos)
 
     def _on_state_changed(self, state):
+        if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause))
+        else:
+            self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            
         self.state_changed.emit(state.value if hasattr(state, 'value') else state)
+
+    def _on_duration_changed(self, duration):
+        self.slider.setRange(0, duration)
 
     def load_file(self, path: str):
         self.media_player.setSource(QUrl.fromLocalFile(path))
