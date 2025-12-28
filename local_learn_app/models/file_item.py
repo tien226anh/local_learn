@@ -23,6 +23,14 @@ class FileItem:
             return FileType.TEXT
         return FileType.UNKNOWN
 
+    @staticmethod
+    def get_supported_extensions() -> list[str]:
+        return [
+            '*.mp4', '*.mkv', '*.avi', '*.mov', '*.webm',
+            '*.jpg', '*.jpeg', '*.png', '*.bmp', '*.gif',
+            '*.txt', '*.md', '*.py', '*.json', '*.html', '*.css', '*.js'
+        ]
+
     def is_video(self) -> bool:
         return self.file_type == FileType.VIDEO
 

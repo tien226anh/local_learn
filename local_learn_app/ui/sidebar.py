@@ -1,7 +1,9 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QListWidgetItem, QLabel
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QLabel, QHeaderView
+from PyQt6.QtCore import pyqtSignal, QDir
+from PyQt6.QtGui import QFileSystemModel
 from local_learn_app.models.course import Course
 from local_learn_app.models.file_item import FileItem
+import os
 
 class Sidebar(QWidget):
     item_selected = pyqtSignal(FileItem)
@@ -15,32 +17,35 @@ class Sidebar(QWidget):
         self.header.setStyleSheet("padding: 10px; font-weight: bold; background-color: #eee;")
         self.layout.addWidget(self.header)
 
-        self.list_widget = QListWidget()
-        self.list_widget.itemClicked.connect(self._on_item_clicked)
-        self.layout.addWidget(self.list_widget)
+        self.model = QFileSystemModel()
+        self.model.setFilter(QDir.Filter.AllDirs | QDir.Filter.Files | QDir.Filter.NoDotAndDotDot)
+        self.model.setNameFilters(FileItem.get_supported_extensions())
+        self.model.setNameFilterDisables(False) # Hide files that don't match
+
+        self.tree_view = QTreeView()
+        self.tree_view.setModel(self.model)
+        self.tree_view.setHeaderHidden(True)
+        # Hide Size, Type, Date columns, keep Name
+        self.tree_view.setColumnHidden(1, True)
+        self.tree_view.setColumnHidden(2, True)
+        self.tree_view.setColumnHidden(3, True)
         
-        self._course_items = {} # map item id (row) to FileItem? or store in data
+        self.tree_view.clicked.connect(self._on_item_clicked)
+        self.layout.addWidget(self.tree_view)
 
     def load_course(self, course: Course):
-        self.list_widget.clear()
-        self._course_items = {}
-        
-        for item in course.get_items():
-            list_item = QListWidgetItem(item.name)
-            # Store FileItem in UserRole data
-            list_item.setData(Qt.ItemDataRole.UserRole, item)
-            self.list_widget.addItem(list_item)
+        root_path = course.root_path
+        self.model.setRootPath(root_path)
+        self.tree_view.setRootIndex(self.model.index(root_path))
 
-    def _on_item_clicked(self, item: QListWidgetItem):
-        file_item = item.data(Qt.ItemDataRole.UserRole)
-        if file_item:
+    def _on_item_clicked(self, index):
+        path = self.model.filePath(index)
+        if not self.model.isDir(index):
+            file_item = FileItem(path)
             self.item_selected.emit(file_item)
     
     def select_item_by_path(self, path: str):
-        # iterate and select
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            file_item = item.data(Qt.ItemDataRole.UserRole)
-            if file_item and file_item.path == path:
-                self.list_widget.setCurrentItem(item)
-                return
+        index = self.model.index(path)
+        if index.isValid():
+            self.tree_view.setCurrentIndex(index)
+            self.tree_view.scrollTo(index)
