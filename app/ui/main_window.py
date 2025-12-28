@@ -16,6 +16,8 @@ class MainWindow(QMainWindow):
         self.course_manager = CourseManager()
         self.current_course = None
         
+        self.setDockOptions(QMainWindow.DockOption.AnimatedDocks | QMainWindow.DockOption.AllowNestedDocks)
+        
         self._init_ui()
         self._create_menu()
 

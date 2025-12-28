@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QSlider, QStyle, QLabel, QWidget
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QSlider, QStyle, QLabel
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtCore import QUrl, pyqtSignal, Qt, QTime
@@ -47,52 +47,35 @@ class VideoPlayer(BaseViewer):
 
         # Controls Container
         self.controls_container = QWidget()
-        self.controls_container.setFixedHeight(30) # Strictly limit height
-        self.controls_container.setStyleSheet("background-color: #222;") # Remove internal padding from stylesheet
+        self.controls_container.setStyleSheet("background-color: #222; padding: 5px;")
         self.layout.addWidget(self.controls_container)
 
         # Controls Layout
         self.controls_layout = QHBoxLayout(self.controls_container)
-        self.controls_layout.setContentsMargins(5, 0, 5, 0) # Minimal padding
-        self.controls_layout.setSpacing(8)
+        self.controls_layout.setContentsMargins(5, 5, 5, 5)
 
         # Play/Pause Button
         self.play_button = QPushButton()
-        self.play_button.setFixedSize(24, 24) # Slightly larger for clickability, but remove style padding
-        # Override global style to remove padding/borders/min-width
-        self.play_button.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                padding: 0px;
-                min-width: 0px;
-                border-radius: 0px;
-            }
-            QPushButton:hover {
-                background-color: #333;
-                border-radius: 12px;
-            }
-        """)
+        self.play_button.setFixedSize(32, 32)
         self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.play_button.clicked.connect(self.toggle_playback)
         self.controls_layout.addWidget(self.play_button)
 
         # Current Time Label
         self.current_time_label = QLabel("00:00")
-        self.current_time_label.setFixedWidth(40) # Compact label
+        self.current_time_label.setFixedWidth(50)
         self.current_time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.controls_layout.addWidget(self.current_time_label)
 
         # Slider
         self.slider = ClickableSlider(Qt.Orientation.Horizontal)
-        self.slider.setFixedHeight(14) # Compact slider widget
         self.slider.setRange(0, 0)
         self.slider.sliderMoved.connect(self.set_position)
         self.controls_layout.addWidget(self.slider)
 
         # Total Time Label
         self.total_time_label = QLabel("00:00")
-        self.total_time_label.setFixedWidth(40)
+        self.total_time_label.setFixedWidth(50)
         self.total_time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.controls_layout.addWidget(self.total_time_label)
 

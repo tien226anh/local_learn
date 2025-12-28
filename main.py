@@ -6,9 +6,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication
 from app.ui.main_window import MainWindow
+from app.ui.styles import DARK_THEME_QSS
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyleSheet(DARK_THEME_QSS)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
