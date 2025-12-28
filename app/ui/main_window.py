@@ -2,10 +2,10 @@ import os
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QDockWidget, QMessageBox, QWidget, QVBoxLayout
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
-from local_learn_app.core.course_manager import CourseManager
-from local_learn_app.ui.sidebar import Sidebar
-from local_learn_app.ui.content_area import ContentArea
-from local_learn_app.models.file_item import FileItem
+from app.core.course_manager import CourseManager
+from app.ui.sidebar import Sidebar
+from app.ui.content_area import ContentArea
+from app.models.file_item import FileItem
 
 class MainWindow(QMainWindow):
     def __init__(self):

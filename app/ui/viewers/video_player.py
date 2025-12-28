@@ -4,6 +4,22 @@ from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtCore import QUrl, pyqtSignal, Qt
 from .base_viewer import BaseViewer
 
+class ClickableVideoWidget(QVideoWidget):
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+class ClickableSlider(QSlider):
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            val = QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), event.pos().x(), self.width())
+            self.setValue(val)
+            self.sliderMoved.emit(val)
+        super().mousePressEvent(event)
+
 class VideoPlayer(BaseViewer):
     # Signal to emit progress or pause state if needed
     position_changed = pyqtSignal(int)
@@ -13,7 +29,8 @@ class VideoPlayer(BaseViewer):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         
-        self.video_widget = QVideoWidget()
+        self.video_widget = ClickableVideoWidget()
+        self.video_widget.clicked.connect(self.toggle_playback)
         self.layout.addWidget(self.video_widget)
         
         self.media_player = QMediaPlayer()
@@ -37,7 +54,7 @@ class VideoPlayer(BaseViewer):
         self.controls_layout.addWidget(self.play_button)
 
         # Slider
-        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider = ClickableSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(0, 0)
         self.slider.sliderMoved.connect(self.set_position)
         # Using sliderPressed/Released could be better for smoother seeking, but sliderMoved is usually okay

@@ -1,7 +1,7 @@
 import os
 from typing import List
-from local_learn_app.models.course import Course
-from local_learn_app.models.file_item import FileItem
+from app.models.course import Course
+from app.models.file_item import FileItem
 from .state_manager import StateManager
 
 class CourseManager:

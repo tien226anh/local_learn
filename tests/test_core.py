@@ -3,9 +3,9 @@ import os
 import shutil
 import tempfile
 import json
-from local_learn_app.core.state_manager import StateManager
-from local_learn_app.core.course_manager import CourseManager
-from local_learn_app.models.file_item import FileType, FileItem
+from app.core.state_manager import StateManager
+from app.core.course_manager import CourseManager
+from app.models.file_item import FileType, FileItem
 
 class TestCoreLogic(unittest.TestCase):
     def setUp(self):

@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication
-from local_learn_app.ui.main_window import MainWindow
+from app.ui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)

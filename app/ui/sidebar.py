@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QLabel, QHeaderView
 from PyQt6.QtCore import pyqtSignal, QDir
 from PyQt6.QtGui import QFileSystemModel
-from local_learn_app.models.course import Course
-from local_learn_app.models.file_item import FileItem
+from app.models.course import Course
+from app.models.file_item import FileItem
 import os
 
 class Sidebar(QWidget):

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QStackedWidget, QLabel, QWidget, QVBoxLayout
-from local_learn_app.models.file_item import FileItem
+from app.models.file_item import FileItem
 from .viewers.video_player import VideoPlayer
 from .viewers.image_viewer import ImageViewer
 from .viewers.text_editor import TextEditor
