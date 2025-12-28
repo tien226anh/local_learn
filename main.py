@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import Qt
 from app.ui.main_window import MainWindow
 from app.ui.styles import DARK_THEME_QSS
 
@@ -12,7 +13,13 @@ def main():
     app = QApplication(sys.argv)
     app.setStyleSheet(DARK_THEME_QSS)
     window = MainWindow()
-    window.show()
+    
+    if "--no-focus" in sys.argv:
+        window.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        window.show()
+    else:
+        window.show()
+        
     sys.exit(app.exec())
 
 if __name__ == "__main__":
