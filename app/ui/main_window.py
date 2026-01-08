@@ -1,11 +1,12 @@
 import os
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QDockWidget, QMessageBox, QWidget, QVBoxLayout
-from PyQt6.QtGui import QAction, QActionGroup
+from PyQt6.QtGui import QAction, QActionGroup, QKeySequence
 from PyQt6.QtCore import Qt
 from app.core.course_manager import CourseManager
 from app.core.theme_manager import ThemeManager
 from app.ui.sidebar import Sidebar
 from app.ui.content_area import ContentArea
+from app.ui.note_editor import NoteEditor
 from app.models.file_item import FileItem
 
 class MainWindow(QMainWindow):
@@ -39,6 +40,14 @@ class MainWindow(QMainWindow):
         self.content_area = ContentArea(course_manager=self.course_manager)
         self.setCentralWidget(self.content_area)
         
+        # Note Editor (Right Panel)
+        self.note_editor = NoteEditor()
+        self.note_dock = QDockWidget("Notes", self)
+        self.note_dock.setWidget(self.note_editor)
+        self.note_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+        self.note_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable | QDockWidget.DockWidgetFeature.DockWidgetMovable)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.note_dock)
+        
         # Connect video signals for state saving and auto-play next
         player = self.content_area.get_video_player()
         player.state_changed.connect(self.on_video_state_changed)
@@ -54,7 +63,12 @@ class MainWindow(QMainWindow):
         
         view_menu = menu_bar.addMenu("&View")
         toggle_sidebar_action = self.dock.toggleViewAction()
+        toggle_sidebar_action.setShortcut(QKeySequence("Ctrl+B"))
         view_menu.addAction(toggle_sidebar_action)
+        
+        toggle_notes_action = self.note_dock.toggleViewAction()
+        toggle_notes_action.setShortcut(QKeySequence("Ctrl+L"))
+        view_menu.addAction(toggle_notes_action)
         
         # Theme submenu
         theme_menu = view_menu.addMenu("Theme")
@@ -85,6 +99,9 @@ class MainWindow(QMainWindow):
             self.current_course = self.course_manager.load_course(folder)
             self.sidebar.load_course(self.current_course)
             self.setWindowTitle(f"Local Learn - {os.path.basename(folder)}")
+            
+            # Load notes for this course
+            self.note_editor.set_course_path(folder)
             
             # Check last played
             last_video, timestamp = self.course_manager.get_last_played(self.current_course)
@@ -124,6 +141,9 @@ class MainWindow(QMainWindow):
         self.sidebar.select_next_item()
 
     def closeEvent(self, event):
+        # Save notes before closing
+        self.note_editor.save_notes()
+        
         # Save current state if video is playing
         if self.current_course and self.content_area.current_file and self.content_area.current_file.is_video():
             pos = self.content_area.get_video_player().get_position()
