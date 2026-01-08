@@ -4,6 +4,7 @@ from typing import Dict, Any
 
 class StateManager:
     STATE_FILE_NAME = ".course_state.json"
+    COURSE_PROGRESS = ".course_progress.json"
 
     @staticmethod
     def get_state_file_path(course_path: str) -> str:

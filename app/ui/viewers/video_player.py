@@ -7,8 +7,14 @@ from .base_viewer import BaseViewer
 class ClickableVideoWidget(QVideoWidget):
     clicked = pyqtSignal()
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Allow this widget to receive focus
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            self.setFocus()  # Take focus on click
             self.clicked.emit()
         super().mousePressEvent(event)
 
@@ -24,15 +30,19 @@ class VideoPlayer(BaseViewer):
     # Signal to emit progress or pause state if needed
     position_changed = pyqtSignal(int)
     state_changed = pyqtSignal(int)
+    video_ended = pyqtSignal()  # Emitted when video finishes playing
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Make this widget focusable
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0,0,0,0)
         
         self.video_widget = ClickableVideoWidget()
-        self.video_widget.clicked.connect(self.toggle_playback)
+        self.video_widget.clicked.connect(self._on_video_clicked)
         self.layout.addWidget(self.video_widget)
         
         self.media_player = QMediaPlayer()
@@ -44,6 +54,7 @@ class VideoPlayer(BaseViewer):
         self.media_player.positionChanged.connect(self._on_position_changed)
         self.media_player.playbackStateChanged.connect(self._on_state_changed)
         self.media_player.durationChanged.connect(self._on_duration_changed)
+        self.media_player.mediaStatusChanged.connect(self._on_media_status_changed)
 
         # Controls Container
         self.controls_container = QWidget()
@@ -96,11 +107,69 @@ class VideoPlayer(BaseViewer):
         self.total_time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.controls_layout.addWidget(self.total_time_label)
 
+        # Volume Button (speaker icon)
+        self.volume_button = QPushButton()
+        self.volume_button.setFixedSize(24, 24)
+        self.volume_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                padding: 0px;
+                min-width: 0px;
+                border-radius: 0px;
+            }
+            QPushButton:hover {
+                background-color: #333;
+                border-radius: 12px;
+            }
+        """)
+        self.volume_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolume))
+        self.volume_button.clicked.connect(self.toggle_mute)
+        self.controls_layout.addWidget(self.volume_button)
+
+        # Volume Slider
+        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setFixedWidth(80)
+        self.volume_slider.setFixedHeight(14)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setValue(100)  # Default full volume
+        self.volume_slider.valueChanged.connect(self._on_volume_changed)
+        self.controls_layout.addWidget(self.volume_slider)
+        
+        self._is_muted = False
+        self._previous_volume = 100
+
+    def _on_video_clicked(self):
+        """Handle click on video area - set focus and toggle playback."""
+        self.setFocus()  # Set focus on VideoPlayer so it receives key events
+        self.toggle_playback()
+
     def toggle_playback(self):
         if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.media_player.pause()
         else:
             self.media_player.play()
+
+    def toggle_mute(self):
+        """Toggle audio mute on/off."""
+        if self._is_muted:
+            self.volume_slider.setValue(self._previous_volume)
+            self._is_muted = False
+        else:
+            self._previous_volume = self.volume_slider.value() if self.volume_slider.value() > 0 else 100
+            self.volume_slider.setValue(0)
+            self._is_muted = True
+
+    def _on_volume_changed(self, value):
+        """Handle volume slider changes."""
+        # QAudioOutput volume is 0.0 to 1.0
+        self.audio_output.setVolume(value / 100.0)
+        
+        # Update icon based on volume level
+        if value == 0:
+            self.volume_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolumeMuted))
+        else:
+            self.volume_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolume))
 
     def _format_time(self, ms: int) -> str:
         seconds = (ms // 1000) % 60
@@ -130,6 +199,11 @@ class VideoPlayer(BaseViewer):
         self.slider.setRange(0, duration)
         self.total_time_label.setText(self._format_time(duration))
 
+    def _on_media_status_changed(self, status):
+        """Handle media status changes to detect end of video."""
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self.video_ended.emit()
+
     def load_file(self, path: str):
         self.media_player.setSource(QUrl.fromLocalFile(path))
         self.media_player.play()
@@ -145,3 +219,35 @@ class VideoPlayer(BaseViewer):
 
     def cleanup(self):
         self.media_player.stop()
+
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts for video control."""
+        key = event.key()
+        
+        # Volume control: Up/Down arrows (+/- 5%)
+        if key == Qt.Key.Key_Up:
+            new_vol = min(100, self.volume_slider.value() + 5)
+            self.volume_slider.setValue(new_vol)
+            event.accept()
+        elif key == Qt.Key.Key_Down:
+            new_vol = max(0, self.volume_slider.value() - 5)
+            self.volume_slider.setValue(new_vol)
+            event.accept()
+        
+        # Seeking: Left/Right arrows (+/- 5 seconds)
+        elif key == Qt.Key.Key_Left:
+            new_pos = max(0, self.media_player.position() - 5000)
+            self.media_player.setPosition(new_pos)
+            event.accept()
+        elif key == Qt.Key.Key_Right:
+            new_pos = min(self.media_player.duration(), self.media_player.position() + 5000)
+            self.media_player.setPosition(new_pos)
+            event.accept()
+        
+        # Space for play/pause
+        elif key == Qt.Key.Key_Space:
+            self.toggle_playback()
+            event.accept()
+        
+        else:
+            super().keyPressEvent(event)

@@ -14,7 +14,7 @@ class Sidebar(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         
         self.header = QLabel("Course Content")
-        self.header.setStyleSheet("padding: 10px; font-weight: bold; background-color: #333; color: #fff;")
+        self.header.setObjectName("sidebarHeader")  # For theme styling
         self.layout.addWidget(self.header)
 
         self.model = QFileSystemModel()
@@ -49,3 +49,55 @@ class Sidebar(QWidget):
         if index.isValid():
             self.tree_view.setCurrentIndex(index)
             self.tree_view.scrollTo(index)
+
+    def select_next_item(self) -> bool:
+        """
+        Select the next video file in the tree view.
+        Returns True if a next item was found and selected, False otherwise.
+        """
+        current_index = self.tree_view.currentIndex()
+        if not current_index.isValid():
+            return False
+        
+        # Get the next sibling or traverse to find next file
+        next_index = self._find_next_file(current_index)
+        
+        if next_index and next_index.isValid():
+            self.tree_view.setCurrentIndex(next_index)
+            self.tree_view.scrollTo(next_index)
+            # Emit the selection signal
+            path = self.model.filePath(next_index)
+            if not self.model.isDir(next_index):
+                file_item = FileItem(path)
+                self.item_selected.emit(file_item)
+                return True
+        return False
+
+    def _find_next_file(self, current_index):
+        """Find the next file after current_index in tree traversal order."""
+        # Try next sibling first
+        next_index = current_index.siblingAtRow(current_index.row() + 1)
+        
+        while True:
+            if next_index.isValid():
+                # If it's a directory, go into it
+                if self.model.isDir(next_index):
+                    # Get first child
+                    child = self.model.index(0, 0, next_index)
+                    if child.isValid():
+                        if not self.model.isDir(child):
+                            return child
+                        next_index = child
+                        continue
+                    # Empty directory, try next sibling
+                    next_index = next_index.siblingAtRow(next_index.row() + 1)
+                else:
+                    # It's a file
+                    return next_index
+            else:
+                # No more siblings, go to parent's next sibling
+                parent = current_index.parent()
+                if not parent.isValid() or parent == self.tree_view.rootIndex():
+                    return None  # Reached the end
+                current_index = parent
+                next_index = parent.siblingAtRow(parent.row() + 1)

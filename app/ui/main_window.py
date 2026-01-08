@@ -1,8 +1,9 @@
 import os
 from PyQt6.QtWidgets import QMainWindow, QFileDialog, QDockWidget, QMessageBox, QWidget, QVBoxLayout
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt
 from app.core.course_manager import CourseManager
+from app.core.theme_manager import ThemeManager
 from app.ui.sidebar import Sidebar
 from app.ui.content_area import ContentArea
 from app.models.file_item import FileItem
@@ -14,6 +15,7 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
         
         self.course_manager = CourseManager()
+        self.theme_manager = ThemeManager()
         self.current_course = None
         
         self.setDockOptions(QMainWindow.DockOption.AnimatedDocks | QMainWindow.DockOption.AllowNestedDocks)
@@ -29,15 +31,18 @@ class MainWindow(QMainWindow):
         self.dock = QDockWidget("Course Content", self)
         self.dock.setWidget(self.sidebar)
         self.dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+        # Enable close, disable floating (undock)
+        self.dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable | QDockWidget.DockWidgetFeature.DockWidgetMovable)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dock)
         
         # Content Area
         self.content_area = ContentArea(course_manager=self.course_manager)
         self.setCentralWidget(self.content_area)
         
-        # Connect video signals for state saving
+        # Connect video signals for state saving and auto-play next
         player = self.content_area.get_video_player()
         player.state_changed.connect(self.on_video_state_changed)
+        player.video_ended.connect(self.on_video_ended)
 
     def _create_menu(self):
         menu_bar = self.menuBar()
@@ -50,6 +55,25 @@ class MainWindow(QMainWindow):
         view_menu = menu_bar.addMenu("&View")
         toggle_sidebar_action = self.dock.toggleViewAction()
         view_menu.addAction(toggle_sidebar_action)
+        
+        # Theme submenu
+        theme_menu = view_menu.addMenu("Theme")
+        theme_group = QActionGroup(self)
+        theme_group.setExclusive(True)
+        
+        current_theme = self.theme_manager.get_current_theme()
+        
+        light_action = QAction("Light", self, checkable=True)
+        light_action.setChecked(current_theme == "light")
+        light_action.triggered.connect(lambda: self.theme_manager.set_theme("light"))
+        theme_group.addAction(light_action)
+        theme_menu.addAction(light_action)
+        
+        dark_action = QAction("Dark", self, checkable=True)
+        dark_action.setChecked(current_theme == "dark")
+        dark_action.triggered.connect(lambda: self.theme_manager.set_theme("dark"))
+        theme_group.addAction(dark_action)
+        theme_menu.addAction(dark_action)
 
     def open_course(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Course Directory")
@@ -94,6 +118,10 @@ class MainWindow(QMainWindow):
              if self.current_course and self.content_area.current_file and self.content_area.current_file.is_video():
                 pos = self.content_area.get_video_player().get_position()
                 self.course_manager.save_progress(self.current_course, self.content_area.current_file.path, pos)
+
+    def on_video_ended(self):
+        """Auto-play next video when current video ends."""
+        self.sidebar.select_next_item()
 
     def closeEvent(self, event):
         # Save current state if video is playing
